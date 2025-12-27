@@ -1,11 +1,11 @@
 meta {
-  name: Sign In (Kakao id_token -> accessToken)
+  name: Refresh Access Token
   type: http
-  seq: 1
+  seq: 10
 }
 
 post {
-  url: {{baseUrl}}/auth/kakao/id-token
+  url: {{baseUrl}}/auth/refresh
   body: json
   auth: none
 }
@@ -16,8 +16,7 @@ headers {
 
 body:json {
   {
-    "idToken": "{{$oauth2.kakao.id_token}}",
-    "nonce": "{{oidcNonce}}"
+    "refreshToken": "{{refreshToken}}"
   }
 }
 

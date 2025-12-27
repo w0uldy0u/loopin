@@ -25,7 +25,6 @@ export class PostService {
       data: {
         content: content ?? null,
         authorId,
-        catId: catId ?? null,
       },
     })
 
@@ -64,7 +63,6 @@ export class PostService {
       return this.prisma.post.findUniqueOrThrow({
         where: { id: post.id },
         include: {
-          cat: true,
           author: {
             select: {
               id: true,
@@ -91,29 +89,6 @@ export class PostService {
       where: { authorId: userId },
       orderBy: { id: "desc" },
       include: {
-        cat: true,
-        author: {
-          select: {
-            id: true,
-            nickname: true,
-            profileImageUrl: true,
-          },
-        },
-        images: true,
-      },
-    })
-  }
-
-  getCatPosts(catId: string, cursor?: string | null, take = 20) {
-    const pagination = this.prisma.getPaginator(cursor ?? null)
-
-    return this.prisma.post.findMany({
-      ...pagination,
-      take,
-      where: { catId },
-      orderBy: { id: "desc" },
-      include: {
-        cat: true,
         author: {
           select: {
             id: true,
@@ -134,7 +109,6 @@ export class PostService {
       take,
       orderBy: { id: "desc" },
       include: {
-        cat: true,
         author: {
           select: {
             id: true,
@@ -151,7 +125,6 @@ export class PostService {
     return this.prisma.post.findUniqueOrThrow({
       where: { id },
       include: {
-        cat: true,
         author: {
           select: {
             id: true,
@@ -187,7 +160,6 @@ export class PostService {
         ...(catId !== undefined && { catId: catId ?? null }),
       },
       include: {
-        cat: true,
         author: {
           select: {
             id: true,

@@ -86,18 +86,3 @@ export class UserPostController {
     return this.postService.getUserPosts(userId, cursor ?? null, take)
   }
 }
-
-@Controller("cat")
-@UseGuards(JwtAuthGuard)
-export class CatPostController {
-  constructor(private readonly postService: PostService) {}
-
-  @Get(":id/post")
-  getCatPosts(
-    @Param("id") catId: string,
-    @Query("cursor") cursor?: string,
-    @Query("take", ParseIntPipe) take?: number,
-  ) {
-    return this.postService.getCatPosts(catId, cursor ?? null, take)
-  }
-}

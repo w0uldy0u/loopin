@@ -8,6 +8,7 @@ import { GoogleJwtVerifier } from "./google-jwt.verifier"
 import { GoogleOidcService } from "./google-oidc.service"
 import { AppleJwtVerifier } from "./apple-jwt.verifier"
 import { AppleOidcService } from "./apple-oidc.service"
+import { RefreshTokenService } from "./refresh-token.service"
 
 @Module({
   controllers: [AuthController],
@@ -19,6 +20,7 @@ import { AppleOidcService } from "./apple-oidc.service"
     AppleJwtVerifier,
     AppleOidcService,
     AppJwtService,
+    RefreshTokenService,
     JwtAuthGuard,
   ],
   exports: [
@@ -29,6 +31,7 @@ import { AppleOidcService } from "./apple-oidc.service"
     AppleJwtVerifier,
     AppleOidcService,
     AppJwtService,
+    RefreshTokenService,
     JwtAuthGuard,
   ],
 })
