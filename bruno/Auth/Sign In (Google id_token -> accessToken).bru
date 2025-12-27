@@ -1,0 +1,25 @@
+meta {
+  name: Sign In (Google id_token -> accessToken)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/auth/google/id-token
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "idToken": "{{googleIdToken}}"
+  }
+}
+
+script:post-response {
+  await require("./auth-token").saveAccessTokenEnv(res);
+}

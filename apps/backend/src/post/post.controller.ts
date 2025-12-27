@@ -1,0 +1,103 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Req,
+  ParseIntPipe,
+  Query,
+} from "@nestjs/common"
+import { PostService } from "./post.service"
+import { CreatePostDto } from "./dto/create-post.dto"
+import { UpdatePostDto } from "./dto/update-post.dto"
+import { JwtAuthGuard } from "@app/auth/guards/jwt-auth.guard"
+import type { AuthenticatedRequest } from "@app/auth/authenticated-request.interface"
+import { PostImageUploadUrlDto } from "./dto/post-image-upload-url.dto"
+
+@Controller("post")
+@UseGuards(JwtAuthGuard)
+export class PostController {
+  constructor(private readonly postService: PostService) {}
+
+  @Post()
+  create(@Req() req: AuthenticatedRequest, @Body() createPostDto: CreatePostDto) {
+    return this.postService.create(req.user.id!, createPostDto)
+  }
+
+  @Post("image/upload-url")
+  getImageUploadUrl(@Req() req: AuthenticatedRequest, @Body() body: PostImageUploadUrlDto) {
+    return this.postService.getImageUploadUrls(req.user.id!, body.count)
+  }
+
+  @Get("my")
+  getMyPosts(
+    @Req() req: AuthenticatedRequest,
+    @Query("cursor") cursor?: string,
+    @Query("take", ParseIntPipe) take?: number,
+  ) {
+    return this.postService.getUserPosts(req.user.id!, cursor ?? null, take)
+  }
+
+  @Get(":id")
+  findOne(@Param("id") id: string) {
+    return this.postService.findOne(id)
+  }
+
+  @Patch(":id")
+  update(
+    @Req() req: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body() updatePostDto: UpdatePostDto,
+  ) {
+    return this.postService.update(id, req.user.id!, updatePostDto)
+  }
+
+  @Delete(":id")
+  delete(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    return this.postService.delete(id, req.user.id!)
+  }
+
+  @Post(":id/like")
+  likePost(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    return this.postService.likePost(id, req.user.id!)
+  }
+
+  @Delete(":id/like")
+  unlikePost(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    return this.postService.unlikePost(id, req.user.id!)
+  }
+}
+
+@Controller("user")
+@UseGuards(JwtAuthGuard)
+export class UserPostController {
+  constructor(private readonly postService: PostService) {}
+
+  @Get(":id/post")
+  getUserPosts(
+    @Param("id") userId: string,
+    @Query("cursor") cursor?: string,
+    @Query("take", ParseIntPipe) take?: number,
+  ) {
+    return this.postService.getUserPosts(userId, cursor ?? null, take)
+  }
+}
+
+@Controller("cat")
+@UseGuards(JwtAuthGuard)
+export class CatPostController {
+  constructor(private readonly postService: PostService) {}
+
+  @Get(":id/post")
+  getCatPosts(
+    @Param("id") catId: string,
+    @Query("cursor") cursor?: string,
+    @Query("take", ParseIntPipe) take?: number,
+  ) {
+    return this.postService.getCatPosts(catId, cursor ?? null, take)
+  }
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Sign In (Apple id_token -> accessToken)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/auth/apple/id-token
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "idToken": "{{appleIdToken}}"
+  }
+}
+
+script:post-response {
+  await require("./auth-token").saveAccessTokenEnv(res);
+}

@@ -1,0 +1,56 @@
+# syntax=docker/dockerfile:1.7-labs
+
+# ---- build stage ----
+FROM node:22-alpine AS builder
+WORKDIR /app
+
+RUN apk add --no-cache openssl libc6-compat \
+  && corepack enable \
+  && corepack prepare pnpm@latest --activate
+
+# Leverage layer caching: install deps with only lockfiles & manifests
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/backend/package.json ./apps/backend/package.json
+RUN --mount=type=cache,target=/root/.pnpm-store \
+  pnpm install --frozen-lockfile --filter ./apps/backend...
+
+# Then bring in sources (invalidates below layers only on source changes)
+COPY apps/backend ./apps/backend
+
+WORKDIR /app/apps/backend
+# Cache prisma engine downloads between builds
+RUN --mount=type=cache,target=/root/.cache/prisma \
+  pnpm prisma generate
+
+RUN pnpm build
+
+# ---- run stage ----
+FROM node:22-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+RUN apk add --no-cache openssl libc6-compat netcat-openbsd \
+  && corepack enable \
+  && corepack prepare pnpm@latest --activate
+
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/backend/package.json apps/backend/package.json
+COPY apps/backend/prisma apps/backend/prisma
+
+# Faster installs with cached pnpm store
+RUN --mount=type=cache,target=/root/.pnpm-store \
+  pnpm install --prod --frozen-lockfile --filter ./apps/backend...
+
+# Cache prisma engine downloads (used by generate)
+RUN --mount=type=cache,target=/root/.cache/prisma \
+  pnpm dlx prisma@6 generate --schema apps/backend/prisma/schema.prisma
+
+COPY --from=builder /app/apps/backend/dist apps/backend/dist
+
+WORKDIR /app/apps/backend
+COPY apps/backend/entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
+
+EXPOSE 3000
+USER node
+ENTRYPOINT ["sh", "./entrypoint.sh"]

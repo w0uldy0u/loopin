@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(uuid(7))
+  nickname         String   @unique
+  hasAgreedToTerms Boolean  @default(false) @map("has_agreed_to_term")
+  phone            String?
+  email            String?
+  profileImageUrl  String?  @map("profile_image_url")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  mainGenreId Int   @map("main_genre_id")
+  mainGenre   Genre @relation("UserMainGenre", fields: [mainGenreId], references: [id], onDelete: Restrict)
+
+  authAccounts AuthAccount[]
+
+  favoriteGenres Genre[]
+  posts          Post[]
+  comments       Comment[]
+  postLikes      PostLike[]
+  commentLikes   CommentLike[]
+
+  @@map("user")
+}
+
+enum AuthProvider {
+  kakao
+  apple
+  google
+}
+
+model AuthAccount {
+  id             String       @id @default(uuid(7))
+  provider       AuthProvider
+  providerUserId String       @map("provider_user_id")
+  email          String?
+
+  userId String? @map("user_id")
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+  @@map("auth_account")
+}
+
+model Genre {
+  id    Int    @id @default(autoincrement())
+  label String @unique()
+
+  users User[]
+
+  mainGenreUsers User[] @relation("UserMainGenre")
+
+  @@map("genre")
+}
+
+model Post {
+  id        String   @id @default(uuid(7))
+  likeCount Int      @default(0) @map("like_count")
+  content   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  authorId String @map("author_id")
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  images   PostImage[]
+  comments Comment[]
+  likes    PostLike[]
+
+  @@index([authorId, id])
+  @@map("post")
+}
+
+model PostImage {
+  id    String @id @default(uuid(7))
+  url   String
+  order Int
+
+  postId String @map("post_id")
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, order])
+  @@map("post_image")
+}
+
+model Comment {
+  id        String   @id @default(uuid(7))
+  likeCount Int      @default(0) @map("like_count")
+  content   String
+  createdAt DateTime @default(now())
+
+  postId   String @map("post_id")
+  post     Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId String @map("author_id")
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  parentId     String?       @map("parent_id")
+  parent       Comment?      @relation("CommentToComment", fields: [parentId], references: [id], onDelete: Cascade)
+  replies      Comment[]     @relation("CommentToComment")
+  commentLikes CommentLike[]
+
+  @@index([postId, id])
+  @@index([parentId, id])
+  @@map("comment")
+}
+
+model PostLike {
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@map("post_like")
+}
+
+model CommentLike {
+  commentId String   @map("comment_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([commentId, userId])
+  @@map("comment_like")
+}

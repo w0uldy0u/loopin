@@ -1,0 +1,78 @@
+networks:
+  edge: {}
+  backend: {}
+
+volumes:
+  loopin-pgdata:
+  loopin-miniodata:
+
+services:
+  traefik:
+    image: traefik:v3
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:8080
+      - --entrypoints.web.forwardedHeaders.trustedIPs=172.19.0.0/16
+      - --api.dashboard=true
+      - --accesslog=true
+      - --accesslog.format=json
+      - --log.level=INFO
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [edge]
+    restart: unless-stopped
+
+  api:
+    image: ghcr.io/catloversclub/loopin:latest
+    env_file: [.env]
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - postgres
+      - minio
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=loopin_edge"
+      - "traefik.http.routers.api.rule=Host(`${API_HOST}`)"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.services.api.loadbalancer.server.port=3000"
+    networks: [edge, backend]
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - loopin-pgdata:/var/lib/postgresql/data
+    networks: [backend]
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    env_file: [.env]
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_SERVER_URL=${MINIO_SERVER_URL}
+    volumes:
+      - loopin-miniodata:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=loopin_edge"
+      - "traefik.http.routers.minio-api.rule=Host(`${MINIO_HOST}`)"
+      - "traefik.http.routers.minio-api.entrypoints=web"
+      - "traefik.http.routers.minio-api.service=minio-api"
+      - "traefik.http.services.minio-api.loadbalancer.server.port=9000"
+      - "traefik.http.routers.minio-console.rule=Host(`${MINIO_CONSOLE_HOST}`)"
+      - "traefik.http.routers.minio-console.entrypoints=web"
+      - "traefik.http.routers.minio-console.service=minio-console"
+      - "traefik.http.services.minio-console.loadbalancer.server.port=9001"
+    networks: [edge, backend]
+    restart: unless-stopped

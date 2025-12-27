@@ -1,0 +1,25 @@
+meta {
+  name: Sign In (Kakao id_token -> accessToken)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/auth/kakao/id-token
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "idToken": "{{$oauth2.kakao.id_token}}"
+  }
+}
+
+script:post-response {
+  await require("./auth-token").saveAccessTokenEnv(res);
+}
